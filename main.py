@@ -13,8 +13,8 @@ RAPIDAPI_KEY = st.secrets["rapidapi"]
 # Oauth setup
 sp = spotipy.Spotify(
     auth_manager=SpotifyOAuth(
-        client_id=st.secrets["spotify"]["client_id"],
-        client_secret=st.secrets["spotify"]["client_secret"],
+        client_id=st.secrets["spotify"]["SPOTIFY_CLIENT_ID"],
+        client_secret=st.secrets["spotify"]["SPOTIFY_CLIENT_SECRET"],
         redirect_uri=REDIRECT_URI,
         scope='user-top-read'
     )
