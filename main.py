@@ -176,7 +176,7 @@ if "oauth" not in st.session_state:
 if "token_info" not in st.session_state:
     st.session_state.token_info = None
 
-url_params = st.experimental_get_query_params()
+url_params = st.query_params()
 
 # attempt to sign in with cached token
 if st.session_state["cached_token"] != "":
