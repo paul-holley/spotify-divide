@@ -2,48 +2,34 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import streamlit as st
 import pandas as pd
-import dotenv
-import os
 import requests
 import json
 from google.cloud import storage
 
 # environment setup
-dotenv.load_dotenv()
-CLIENT_ID = os.environ.get('CLIENT_ID')
-CLIENT_SECRET = os.environ.get('CLIENT_SECRET')
 REDIRECT_URI = 'http://127.0.0.1:9090'
-RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
+RAPIDAPI_KEY = st.secrets["rapidapi"]
 
 # Oauth setup
 sp = spotipy.Spotify(
     auth_manager=SpotifyOAuth(
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
+        client_id=st.secrets["spotify"]["client_id"],
+        client_secret=st.secrets["spotify"]["client_secret"],
         redirect_uri=REDIRECT_URI,
         scope='user-top-read'
     )
 )
 
-
-
 # Get the path to your service account JSON
 GCS_BUCKET_NAME = "spotify-audio-features"
-KEY_PATH = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-
-print("CWD:", os.getcwd())
-print("KEY_PATH:", KEY_PATH)
-
-
-if not KEY_PATH or not GCS_BUCKET_NAME:
+if not GCS_BUCKET_NAME:
     st.error("GCS credentials or bucket name not set!")
     st.stop()
 
 # Create a storage client using the JSON key
-client = storage.Client.from_service_account_json(KEY_PATH)
+client = storage.Client.from_service_account_json(st.secrets["gcp"])
 bucket = client.bucket(GCS_BUCKET_NAME)
-
 
 # gets audio features for one song, need to add way to check server first, so I don't call the api too much
 def get_audio_features_by_spotify_id(track_id):
@@ -71,8 +57,6 @@ def get_audio_features_by_spotify_id(track_id):
             st.error(f"RapidAPI HTTP error for {track_id}: {e}")
         return None
 
-
-
 def normalize_features(api_data):
     minutes, seconds = api_data["duration"].split(":")
     duration_seconds = int(minutes) * 60 + int(seconds)
@@ -95,7 +79,6 @@ def normalize_features(api_data):
         "speechiness": api_data["speechiness"],
         "loudness_db": loudness_db
     }
-
 
 # streamlit setup
 st.set_page_config(page_title='Spotify Two Halfs', page_icon=':musical_note')
