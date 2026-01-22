@@ -1,0 +1,17 @@
+# Virtual environments
+.venv/
+venv/
+
+# Environment variables
+.env
+
+# Google Cloud credentials
+*.json
+
+# Python cache
+__pycache__/
+.cache/
+*.pyc
+
+# IDE files
+.idea/
