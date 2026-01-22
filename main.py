@@ -107,12 +107,12 @@ def normalize_features(api_data):
     }
 
 # streamlit setup
-st.set_page_config(page_title='Spotify Two Halfs', page_icon=':musical_note')
-st.title('Title Test')
-st.write('This is the page, hopefully it all works')
+st.set_page_config(page_title='Spotify Data Harvesting!', page_icon=':musical_note')
+st.title('I am downloading your data')
+st.write('All your songs are belong to me')
 
 # get top n tracks from user
-n = 5
+n = 25
 top_tracks = sp.current_user_top_tracks(limit=n, time_range='short_term')['items']
 
 # display top tracks on streamlit
