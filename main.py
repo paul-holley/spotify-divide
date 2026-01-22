@@ -67,6 +67,7 @@ def get_audio_features_by_spotify_id(track_id):
         "X-RapidAPI-Host": "track-analysis.p.rapidapi.com"
     }
 
+    time.sleep(1)  # wait one second before another rapid api call
     try:
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
@@ -84,7 +85,7 @@ def get_audio_features_by_spotify_id(track_id):
             st.error(f"RapidAPI HTTP error for {track_id}: {e}")
         return None
 
-    time.sleep(1) # wait one second before another rapid api call
+
 
 def normalize_features(api_data):
     minutes, seconds = api_data["duration"].split(":")
