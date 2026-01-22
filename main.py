@@ -1,5 +1,6 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+from spotipy import Spotify
 import streamlit as st
 import pandas as pd
 import time
@@ -14,17 +15,34 @@ REDIRECT_URI = 'https://spotify-divide.streamlit.app/'
 RAPIDAPI_KEY = st.secrets["rapidapi"]["key"]
 
 # Oauth setup
-auth_manager = SpotifyOAuth(
+oauth = SpotifyOAuth(
     client_id=st.secrets["spotify"]["SPOTIFY_CLIENT_ID"],
     client_secret=st.secrets["spotify"]["SPOTIFY_CLIENT_SECRET"],
     redirect_uri=REDIRECT_URI,
     scope='user-top-read',
-    cache_path=".spotify_cache"
+    cache_path=None
 )
 
-sp = spotipy.Spotify(auth_manager)
+#for spotify login
+if "token_info" not in st.session_state:
+    st.session_state.token_info = None
 
-auth_url = auth_manager.get_authorize_url()
+
+auth_url = oauth.get_authorize_url()
+# If code in URL from redirect, get access token
+code = st.experimental_get_query_params().get("code")
+if code and not st.session_state.token_info:
+    st.session_state.token_info = oauth.get_access_token(code[0], as_dict=False)
+    st.experimental_set_query_params()  # clear code from URL
+
+#if not logged in, show login link and stop
+if not st.session_state.token_info:
+    auth_url = oauth.get_authorize_url()
+    st.markdown(f"[Click here to log in with Spotify]({auth_url})")
+    st.stop()  # Stop execution until user logs in
+
+spotify = Spotify(auth=st.session_state.token_info["access_token"])
+st.write("✅ Logged in as:", spotify.current_user()["display_name"])
 
 # Get the path to your service account JSON
 GCS_BUCKET_NAME = "spotify-audio-features"
@@ -119,7 +137,7 @@ def normalize_features(api_data):
 if "code" not in st.session_state:
     st.markdown(f"[Log in with Spotify]({auth_url})")
 else:
-    token_info = auth_manager.get_access_token(st.session_state.code)
+    token_info = oauth.get_access_token(st.session_state.code)
     sp = spotipy.Spotify(auth=token_info["access_token"])
 
 
