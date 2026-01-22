@@ -10,7 +10,7 @@ from google.cloud import storage
 from google.oauth2 import service_account
 
 # environment setup
-REDIRECT_URI = 'http://127.0.0.1:9090'
+REDIRECT_URI = 'https://spotify-divide.streamlit.app/'
 RAPIDAPI_KEY = st.secrets["rapidapi"]["key"]
 
 # Oauth setup
@@ -115,15 +115,19 @@ def normalize_features(api_data):
 
 
 # streamlit setup
-st.set_page_config(page_title='Spotify Data Harvesting!', page_icon=':musical_note')
-st.title('I am downloading your data')
-st.write('All your songs are belong to me')
 
 if "code" not in st.session_state:
     st.markdown(f"[Log in with Spotify]({auth_url})")
 else:
     token_info = auth_manager.get_access_token(st.session_state.code)
     sp = spotipy.Spotify(auth=token_info["access_token"])
+
+
+st.set_page_config(page_title='Spotify Data Harvesting!', page_icon=':musical_note')
+st.title('I am downloading your data')
+st.write('All your songs are belong to me')
+
+
 
 # get top n tracks from user
 n = 25
