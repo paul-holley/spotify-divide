@@ -55,7 +55,7 @@ if "token_info" not in st.session_state:
 # get authorization code from URL if redirected
 code = st.experimental_get_query_params().get("code")
 if code and not st.session_state.token_info:
-    st.session_state.token_info = oauth.get_access_token(code[0], as_dict=False)
+    st.session_state.token_info = oauth.get_access_token(code[0], as_dict=True)
     st.experimental_set_query_params()  # clear code from URL
 
 # if not logged in, show login link and stop
