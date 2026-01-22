@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import json
+import datetime
 from google.cloud import storage
 from google.oauth2 import service_account
 
@@ -23,6 +24,7 @@ sp = spotipy.Spotify(
 
 # Get the path to your service account JSON
 GCS_BUCKET_NAME = "spotify-audio-features"
+usage_bucket_name = "spotify-rapidapi-tracker"
 
 if not GCS_BUCKET_NAME:
     st.error("GCS credentials or bucket name not set!")
@@ -32,6 +34,15 @@ if not GCS_BUCKET_NAME:
 credentials = service_account.Credentials.from_service_account_info(st.secrets["gcp"])
 client = storage.Client(credentials=credentials)
 bucket = client.bucket(GCS_BUCKET_NAME)
+usage_bucket = client.bucket(usage_bucket_name)
+
+usage_blob = usage_bucket.blob("api_usage/rapidapi.json") # path inside the bucket
+if not usage_blob.exists():
+    data = {
+        "month": datetime.datetime.now().strftime("%Y-%m"),
+        "calls_made": 0
+    }
+    usage_blob.upload_from_string(json.dumps(data), content_type="application/json")
 
 # gets audio features for one song, need to add way to check server first, so I don't call the api too much
 def get_audio_features_by_spotify_id(track_id):
