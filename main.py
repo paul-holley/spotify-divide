@@ -69,7 +69,7 @@ def get_audio_features_by_spotify_id(track_id):
 
     time.sleep(1)  # wait one second before another rapid api call
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
         return response.json()
 
