@@ -45,8 +45,6 @@ if not usage_blob.exists():
 # spotify helper functions
 def get_token(oauth, code):
     token = oauth.get_access_token(code, as_dict=False, check_cache=False)
-    # remove cached token saved in directory
-    os.remove(".cahce")
     # return the token
     return token
 
@@ -79,19 +77,7 @@ def app_sign_in():
     return sp
 
 def app_display_welcome():
-    #import secrets from streamlit
-    SPOTIFY_CLIENT_ID = st.secrets["spotify"]["SPOTIFY_CLIENT_ID"]
-    SPOTIFY_CLIENT_SECRET = st.secrets["spotify"]["SPOTIFY_CLIENT_SECRET"]
-    REDIRECT_URI = st.secrets["spotify"]["SPOTIFY_REDIRECT_URI"]
 
-    # Oauth setup
-    oauth = SpotifyOAuth(
-        client_id=SPOTIFY_CLIENT_ID,
-        client_secret=SPOTIFY_CLIENT_SECRET,
-        redirect_uri=REDIRECT_URI,
-        scope='user-top-read',
-        cache_path=None
-    )
     # store oauth in session
     st.session_state["oauth"] = oauth
 
@@ -224,6 +210,21 @@ if not st.session_state.token_info:
     
     spotify = Spotify(auth=st.session_state.token_info["access_token"])
 """
+
+if "oauth" not in st.session_state or st.session_state["oauth"] is None:
+    # import secrets from streamlit
+    SPOTIFY_CLIENT_ID = st.secrets["spotify"]["SPOTIFY_CLIENT_ID"]
+    SPOTIFY_CLIENT_SECRET = st.secrets["spotify"]["SPOTIFY_CLIENT_SECRET"]
+    REDIRECT_URI = st.secrets["spotify"]["SPOTIFY_REDIRECT_URI"]
+
+    # Oauth setup
+    st.session_state["oauth"] = SpotifyOAuth(
+        client_id=SPOTIFY_CLIENT_ID,
+        client_secret=SPOTIFY_CLIENT_SECRET,
+        redirect_uri=REDIRECT_URI,
+        scope='user-top-read',
+        cache_handler=None
+    )
 if st.session_state["signed_in"]:
     user = sp.current_user()
     name = user["display_name"]
