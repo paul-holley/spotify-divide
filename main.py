@@ -25,6 +25,8 @@ sp = spotipy.Spotify(
 # Get the path to your service account JSON
 GCS_BUCKET_NAME = "spotify-audio-features"
 usage_bucket_name = "spotify-rapidapi-tracker"
+TRACK_CACHE_FOLDER = "track_cache/"
+MONTHLY_LIMIT = 5000
 
 if not GCS_BUCKET_NAME:
     st.error("GCS credentials or bucket name not set!")
@@ -46,6 +48,17 @@ if not usage_blob.exists():
 
 # gets audio features for one song, need to add way to check server first, so I don't call the api too much
 def get_audio_features_by_spotify_id(track_id):
+    # --- Check usage ---
+    usage_data = json.loads(usage_blob.download_as_text())
+    current_month = datetime.datetime.now().strftime("%Y-%m")
+    if usage_data["month"] != current_month:
+        # Reset monthly usage at the start of a new month
+        usage_data = {"month": current_month, "calls_made": 0}
+
+    if usage_data["calls_made"] >= MONTHLY_LIMIT:
+        st.error(f"RapidAPI monthly limit of {MONTHLY_LIMIT} reached. Using cached data only.")
+        return None
+
     url = f"https://track-analysis.p.rapidapi.com/pktx/spotify/{track_id}"
 
     headers = {
