@@ -2,6 +2,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import streamlit as st
 import pandas as pd
+import time
 import requests
 import json
 import datetime
@@ -82,6 +83,8 @@ def get_audio_features_by_spotify_id(track_id):
         else:
             st.error(f"RapidAPI HTTP error for {track_id}: {e}")
         return None
+
+    time.sleep(1) # wait one second before another rapid api call
 
 def normalize_features(api_data):
     minutes, seconds = api_data["duration"].split(":")
