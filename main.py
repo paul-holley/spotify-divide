@@ -14,14 +14,17 @@ REDIRECT_URI = 'http://127.0.0.1:9090'
 RAPIDAPI_KEY = st.secrets["rapidapi"]["key"]
 
 # Oauth setup
-sp = spotipy.Spotify(
-    auth_manager=SpotifyOAuth(
-        client_id=st.secrets["spotify"]["SPOTIFY_CLIENT_ID"],
-        client_secret=st.secrets["spotify"]["SPOTIFY_CLIENT_SECRET"],
-        redirect_uri=REDIRECT_URI,
-        scope='user-top-read'
-    )
+auth_manager = SpotifyOAuth(
+    client_id=st.secrets["spotify"]["SPOTIFY_CLIENT_ID"],
+    client_secret=st.secrets["spotify"]["SPOTIFY_CLIENT_SECRET"],
+    redirect_uri=REDIRECT_URI,
+    scope='user-top-read',
+    cache_path=".spotify_cache"
 )
+
+sp = spotipy.Spotify(auth_manager)
+
+auth_url = auth_manager.get_authorize_url()
 
 # Get the path to your service account JSON
 GCS_BUCKET_NAME = "spotify-audio-features"
@@ -39,13 +42,14 @@ client = storage.Client(credentials=credentials)
 bucket = client.bucket(GCS_BUCKET_NAME)
 usage_bucket = client.bucket(usage_bucket_name)
 
-usage_blob = usage_bucket.blob("api_usage/rapidapi.json") # path inside the bucket
+usage_blob = usage_bucket.blob("api_usage/rapidapi.json")  # path inside the bucket
 if not usage_blob.exists():
     data = {
         "month": datetime.datetime.now().strftime("%Y-%m"),
         "calls_made": 0
     }
     usage_blob.upload_from_string(json.dumps(data), content_type="application/json")
+
 
 # gets audio features for one song, need to add way to check server first, so I don't call the api too much
 def get_audio_features_by_spotify_id(track_id):
@@ -86,7 +90,6 @@ def get_audio_features_by_spotify_id(track_id):
         return None
 
 
-
 def normalize_features(api_data):
     minutes, seconds = api_data["duration"].split(":")
     duration_seconds = int(minutes) * 60 + int(seconds)
@@ -110,10 +113,17 @@ def normalize_features(api_data):
         "loudness_db": loudness_db
     }
 
+
 # streamlit setup
 st.set_page_config(page_title='Spotify Data Harvesting!', page_icon=':musical_note')
 st.title('I am downloading your data')
 st.write('All your songs are belong to me')
+
+if "code" not in st.session_state:
+    st.markdown(f"[Log in with Spotify]({auth_url})")
+else:
+    token_info = auth_manager.get_access_token(st.session_state.code)
+    sp = spotipy.Spotify(auth=token_info["access_token"])
 
 # get top n tracks from user
 n = 25
@@ -121,7 +131,7 @@ top_tracks = sp.current_user_top_tracks(limit=n, time_range='short_term')['items
 
 # display top tracks on streamlit
 if st.button("Show Top Tracks"):
-    #for loop goes around top n tracks
+    # for loop goes around top n tracks
     for i in range(n):
         st.write(
             f"{top_tracks[i]['name']} By: "
@@ -134,17 +144,17 @@ if st.button("Show Top Tracks"):
 
         # Create the blob and upload the JSON
         blob = bucket.blob(blob_name)
-        #logic to not duplicate blobs
+        # logic to not duplicate blobs
         if blob.exists():
             st.write("Already processed, skipping")
             continue
 
         st.caption("Analyzing track...")
-        #call RAPID API Track Analysis
+        # call RAPID API Track Analysis
         analysis = get_audio_features_by_spotify_id(track_id)
         features = normalize_features(analysis)
 
-        #format data for upload
+        # format data for upload
         payload = {
             "track_id": track_id,
             "name": top_tracks[i]['name'],
