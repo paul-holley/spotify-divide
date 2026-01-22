@@ -53,9 +53,9 @@ if "token_info" not in st.session_state:
     st.session_state.token_info = None
 
 # get authorization code from URL if redirected
-code = st.experimental_get_query_params().get("code")
-if code and not st.session_state.token_info:
-    st.session_state.token_info = oauth.get_access_token(code[0], as_dict=True)
+code_param = st.experimental_get_query_params().get("code")
+if code_param and not st.session_state.token_info:
+    st.session_state.token_info = oauth.get_access_token(code_param[0], as_dict=True)
     st.experimental_set_query_params()  # clear code from URL
 
 # if not logged in, show login link and stop
@@ -65,6 +65,7 @@ if not st.session_state.token_info:
     st.stop()  # Stop execution until user logs in
 
 spotify = Spotify(auth=st.session_state.token_info["access_token"])
+user = spotify.current_user()
 st.write("✅ Logged in as:", spotify.current_user()["display_name"])
 
 
