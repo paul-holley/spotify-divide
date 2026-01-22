@@ -191,26 +191,6 @@ elif "code" in url_params:
 else:
     app_display_welcome()
 
-""" get authorization code from URL if redirected
-code_param = st.experimental_get_query_params().get("code")
-if code_param and not st.session_state.token_info:
-    token_data = oauth.get_access_token(code_param[0], as_dict=True)
-    # Make sure it's a dict
-    if isinstance(token_data, str):
-        st.session_state.token_info = {"access_token": token_data}
-    else:
-        st.session_state.token_info = token_data
-    st.experimental_set_query_params()  # clear 'code' from URL
-
-# if not logged in, show login link and stop
-if not st.session_state.token_info:
-    auth_url = oauth.get_authorize_url()
-    st.markdown(f"[Click here to log in with Spotify]({auth_url})")
-    st.stop()  # Stop execution until user logs in
-    
-    spotify = Spotify(auth=st.session_state.token_info["access_token"])
-"""
-
 if "oauth" not in st.session_state or st.session_state["oauth"] is None:
     # import secrets from streamlit
     SPOTIFY_CLIENT_ID = st.secrets["spotify"]["SPOTIFY_CLIENT_ID"]
