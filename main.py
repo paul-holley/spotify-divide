@@ -1,6 +1,8 @@
+import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify
 import streamlit as st
+import os
 import pandas as pd
 import time
 import requests
@@ -10,15 +12,14 @@ from google.cloud import storage
 from google.oauth2 import service_account
 
 # environment setup
-REDIRECT_URI = 'https://spotify-divide.streamlit.app/'
+
 MONTHLY_LIMIT = 5000
 TRACK_CACHE_FOLDER = "track_cache/"
 
 # streamlit secrets
 RAPIDAPI_KEY = st.secrets["rapidapi"]["key"]
 GCP_CREDS = st.secrets["gcp"]
-SPOTIFY_CLIENT_ID = st.secrets["spotify"]["SPOTIFY_CLIENT_ID"]
-SPOTIFY_CLIENT_SECRET = st.secrets["spotify"]["SPOTIFY_CLIENT_SECRET"]
+
 
 # Bucket Names
 GCS_BUCKET_NAME = "spotify-audio-features"
@@ -39,42 +40,89 @@ if not usage_blob.exists():
     }
     usage_blob.upload_from_string(json.dumps(data), content_type="application/json")
 
-# Oauth setup
-oauth = SpotifyOAuth(
-    client_id=SPOTIFY_CLIENT_ID,
-    client_secret=SPOTIFY_CLIENT_SECRET,
-    redirect_uri=REDIRECT_URI,
-    scope='user-top-read',
-    cache_path=None
-)
 
-# for spotify login
-if "token_info" not in st.session_state:
-    st.session_state.token_info = None
 
-# get authorization code from URL if redirected
-code_param = st.experimental_get_query_params().get("code")
-if code_param and not st.session_state.token_info:
-    token_data = oauth.get_access_token(code_param[0], as_dict=True)
-    # Make sure it's a dict
-    if isinstance(token_data, str):
-        st.session_state.token_info = {"access_token": token_data}
+# spotify helper functions
+def get_token(oauth, code):
+    token = oauth.get_access_token(code, as_dict=False, check_cache=False)
+    # remove cached token saved in directory
+    os.remove(".cahce")
+    # return the token
+    return token
+
+def sign_in(token):
+    sp = spotipy.Spotify(auth=token)
+    return sp
+
+def app_get_token():
+    try:
+        token = get_token(st.session_state["oauth"], st.session_state["code"])
+    except Exception as e:
+        st.error("An error has occured during token retreval!")
+        st.write("The error is as follows")
+        st.write(e)
     else:
-        st.session_state.token_info = token_data
-    st.experimental_set_query_params()  # clear 'code' from URL
+        st.session_state["cached_token"] = token
 
-# if not logged in, show login link and stop
-if not st.session_state.token_info:
+def app_sign_in():
+    try:
+        sp = sign_in(st.session_state["cached_token"])
+    except Exception as e:
+        st.error("An error occurred during sign-in!")
+        st.write("The error is as follows:")
+        st.write(e)
+    else:
+        st.session_state["signed_in"] = True
+        app_display_welcome()
+        st.success("Sign in success!")
+
+    return sp
+
+def app_display_welcome():
+    #import secrets from streamlit
+    SPOTIFY_CLIENT_ID = st.secrets["spotify"]["SPOTIFY_CLIENT_ID"]
+    SPOTIFY_CLIENT_SECRET = st.secrets["spotify"]["SPOTIFY_CLIENT_SECRET"]
+    REDIRECT_URI = st.secrets["spotify"]["SPOTIFY_REDIRECT_URI"]
+
+    # Oauth setup
+    oauth = SpotifyOAuth(
+        client_id=SPOTIFY_CLIENT_ID,
+        client_secret=SPOTIFY_CLIENT_SECRET,
+        redirect_uri=REDIRECT_URI,
+        scope='user-top-read',
+        cache_path=None
+    )
+    # store oauth in session
+    st.session_state["oauth"] = oauth
+
+    # retrieve auth url
     auth_url = oauth.get_authorize_url()
-    st.markdown(f"[Click here to log in with Spotify]({auth_url})")
-    st.stop()  # Stop execution until user logs in
 
-spotify = Spotify(auth=st.session_state.token_info["access_token"])
-user = spotify.current_user()
-st.write("✅ Logged in as:", spotify.current_user()["display_name"])
+    # should open link in the same tab when streamlit cloud is updated via _self target
+    link_html = " <a target=\"_self\" href=\"{url}\" >{msg}</a> ".format(
+        url=auth_url,
+        msg="Click me to authenticate!"
+    )
 
+    welcome_msg = """
+        Welcome! :wave: This app uses the Spotify API to interact with general 
+        music info! In order to upload data associated with your account, you
+        must log in. You only need to do this once.
+        """
+    note_temp = """
+        _Note: Unfortunately, the current version of Streamlit will not allow for
+        staying on the same page, so the authorization and redirection will open in a 
+        new tab. This has already been addressed in a development release, so it should
+        be implemented in Streamlit Cloud soon!_
+        """
 
-# gets audio features for one song, and uploads it to GCS
+    if not st.session_state["signed_in"]:
+        st.markdown(welcome_msg)
+        st.write(" ".join(["No tokens found for this session. Please log in by",
+                           "clicking the link below."]))
+        st.markdown(link_html, unsafe_allow_html=True)
+        st.markdown(note_temp)
+
 def get_audio_features_by_spotify_id(track_id):
     # Load current usage
     usage_data = json.loads(usage_blob.download_as_text())
@@ -108,7 +156,6 @@ def get_audio_features_by_spotify_id(track_id):
         st.error(f"RapidAPI error for {track_id}: {e}")
         return None
 
-# Normalizes features for ease of use later
 def normalize_features(api_data):
     minutes, seconds = api_data["duration"].split(":")
     duration_seconds = int(minutes) * 60 + int(seconds)
@@ -131,48 +178,101 @@ def normalize_features(api_data):
         "loudness_db": loudness_db
     }
 
+# app session variable initialization
+if "signed_in" not in st.session_state:
+    st.session_state["signed_in"] = False
+if "cached_token" not in st.session_state:
+    st.session_state["cached_token"] = ""
+if "code" not in st.session_state:
+    st.session_state["code"] = ""
+if "oauth" not in st.session_state:
+    st.session_state["oauth"] = None
+if "token_info" not in st.session_state:
+    st.session_state.token_info = None
 
-# streamlit UI
-st.set_page_config(page_title='Spotify Data Harvesting!', page_icon=':musical_note')
-st.title('I am downloading your data')
-st.write('All your songs are belong to me')
+url_params = st.experimental_get_query_params()
 
-# get top n tracks from user
-n = 25
-top_tracks = spotify.current_user_top_tracks(limit=n, time_range='short_term')['items']
+# attempt to sign in with cached token
+if st.session_state["cached_token"] != "":
+    sp = app_sign_in()
+# if no token, but code in url, get code, parse token, then sign in
+elif "code" in url_params:
+    # all params stored as lists
+    st.session_state["code"] = url_params["code"][0]
+    app_get_token()
+    sp = app_sign_in()
+# prompt for redirect
+else:
+    app_display_welcome()
 
-# display top tracks on streamlit
-if st.button("Show Top Tracks"):
-    # for loop goes around top n tracks
-    for i in range(n):
-        track = top_tracks[i]
-        st.write(f"{track['name']} By: {track['artists'][0]['name']}")
+""" get authorization code from URL if redirected
+code_param = st.experimental_get_query_params().get("code")
+if code_param and not st.session_state.token_info:
+    token_data = oauth.get_access_token(code_param[0], as_dict=True)
+    # Make sure it's a dict
+    if isinstance(token_data, str):
+        st.session_state.token_info = {"access_token": token_data}
+    else:
+        st.session_state.token_info = token_data
+    st.experimental_set_query_params()  # clear 'code' from URL
 
-        # Define the blob name in the bucket
-        track_id = track["uri"].split(":")[-1]
-        blob_name = f"tracks/{track_id}.json"
-        blob = bucket.blob(blob_name)
+# if not logged in, show login link and stop
+if not st.session_state.token_info:
+    auth_url = oauth.get_authorize_url()
+    st.markdown(f"[Click here to log in with Spotify]({auth_url})")
+    st.stop()  # Stop execution until user logs in
+    
+    spotify = Spotify(auth=st.session_state.token_info["access_token"])
+"""
+if st.session_state["signed_in"]:
+    user = sp.current_user()
+    name = user["display_name"]
+    username = user["id"]
 
-        # logic to not duplicate blobs, blob name is track id
-        if blob.exists():
-            st.write("Already processed, skipping")
-            continue
 
-        st.caption("Analyzing track...")
+    st.write("✅ Logged in as:", user)
 
-        # call RAPID API Track Analysis
-        analysis = get_audio_features_by_spotify_id(track_id)
-        if analysis:
-            features = normalize_features(analysis)
-            payload = {
-                "track_id": track_id,
-                "name": track["name"],
-                "artist": track["artists"][0]["name"],
-                "uri": track["uri"],
-                "audio_features": features,
-                "source": "rapidapi",
-                "analysis_version": "v1"
-            }
-            blob.upload_from_string(json.dumps(payload), content_type="application/json")
+    # streamlit UI
+    st.set_page_config(page_title='Spotify Data Harvesting!', page_icon=':musical_note')
+    st.title('I am downloading your data')
+    st.write('All your songs are belong to me')
 
-    st.success("Top 10 tracks uploaded successfully!")
+    # get top n tracks from user
+    n = 25
+    top_tracks = sp.current_user_top_tracks(limit=n, time_range='short_term')['items']
+
+    # display top tracks on streamlit
+    if st.button("Show Top Tracks"):
+        # for loop goes around top n tracks
+        for i in range(n):
+            track = top_tracks[i]
+            st.write(f"{track['name']} By: {track['artists'][0]['name']}")
+
+            # Define the blob name in the bucket
+            track_id = track["uri"].split(":")[-1]
+            blob_name = f"tracks/{track_id}.json"
+            blob = bucket.blob(blob_name)
+
+            # logic to not duplicate blobs, blob name is track id
+            if blob.exists():
+                st.write("Already processed, skipping")
+                continue
+
+            st.caption("Analyzing track...")
+
+            # call RAPID API Track Analysis
+            analysis = get_audio_features_by_spotify_id(track_id)
+            if analysis:
+                features = normalize_features(analysis)
+                payload = {
+                    "track_id": track_id,
+                    "name": track["name"],
+                    "artist": track["artists"][0]["name"],
+                    "uri": track["uri"],
+                    "audio_features": features,
+                    "source": "rapidapi",
+                    "analysis_version": "v1"
+                }
+                blob.upload_from_string(json.dumps(payload), content_type="application/json")
+
+        st.success("Top 10 tracks uploaded successfully!")
