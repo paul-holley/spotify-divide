@@ -5,6 +5,7 @@ import pandas as pd
 import requests
 import json
 from google.cloud import storage
+from google.oauth2 import service_account
 
 # environment setup
 REDIRECT_URI = 'http://127.0.0.1:9090'
@@ -27,8 +28,9 @@ if not GCS_BUCKET_NAME:
     st.error("GCS credentials or bucket name not set!")
     st.stop()
 
-# Create a storage client using the JSON key
-client = storage.Client.from_service_account_json(st.secrets["gcp"])
+# Create a storage client using st.secrets
+credentials = service_account.Credentials.from_service_account_info(st.secrets["gcp"])
+client = storage.Client(credentials=credentials)
 bucket = client.bucket(GCS_BUCKET_NAME)
 
 # gets audio features for one song, need to add way to check server first, so I don't call the api too much
