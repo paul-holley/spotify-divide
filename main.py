@@ -9,7 +9,7 @@ from google.oauth2 import service_account
 
 # environment setup
 REDIRECT_URI = 'http://127.0.0.1:9090'
-RAPIDAPI_KEY = st.secrets["rapidapi"]
+RAPIDAPI_KEY = st.secrets["rapidapi"]["key"]
 
 # Oauth setup
 sp = spotipy.Spotify(
