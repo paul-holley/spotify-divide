@@ -78,9 +78,9 @@ def app_sign_in():
 
 def app_display_welcome():
     oauth = SpotifyOAuth(
-        client_id=SPOTIFY_CLIENT_ID,
-        client_secret=SPOTIFY_CLIENT_SECRET,
-        redirect_uri=REDIRECT_URI,
+        client_id=st.secrets["spotify"]["SPOTIFY_CLIENT_ID"],
+        client_secret=st.secrets["spotify"]["SPOTIFY_CLIENT_SECRET"],
+        redirect_uri=st.secrets["spotify"]["SPOTIFY_REDIRECT_URI"],
         scope='user-top-read',
         cache_handler=None
     )
