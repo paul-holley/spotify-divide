@@ -77,6 +77,13 @@ def app_sign_in():
     return sp
 
 def app_display_welcome():
+    oauth = SpotifyOAuth(
+        client_id=SPOTIFY_CLIENT_ID,
+        client_secret=SPOTIFY_CLIENT_SECRET,
+        redirect_uri=REDIRECT_URI,
+        scope='user-top-read',
+        cache_handler=None
+    )
 
     # store oauth in session
     st.session_state["oauth"] = oauth
