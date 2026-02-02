@@ -192,6 +192,7 @@ if st.session_state["cached_token"] != "":
 elif "code" in url_params:
     # all params stored as lists
     st.session_state["code"] = url_params["code"][0]
+    st.write(url_params["code"][0])
     app_get_token()
     sp = app_sign_in()
 # prompt for redirect
