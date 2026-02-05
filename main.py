@@ -182,6 +182,9 @@ if "oauth" not in st.session_state:
     st.session_state["oauth"] = None
 if "token_info" not in st.session_state:
     st.session_state.token_info = None
+# makes sure not to reuse old code
+st.session_state.pop("code", None)
+st.session_state.pop("token", None)
 
 # oauth object moved up to before get_token() call
 if "oauth" not in st.session_state or st.session_state["oauth"] is None:
