@@ -183,6 +183,21 @@ if "oauth" not in st.session_state:
 if "token_info" not in st.session_state:
     st.session_state.token_info = None
 
+# oauth object moved up to before get_token() call
+if "oauth" not in st.session_state or st.session_state["oauth"] is None:
+    # import secrets from streamlit
+    SPOTIFY_CLIENT_ID = st.secrets["spotify"]["SPOTIFY_CLIENT_ID"]
+    SPOTIFY_CLIENT_SECRET = st.secrets["spotify"]["SPOTIFY_CLIENT_SECRET"]
+    REDIRECT_URI = st.secrets["spotify"]["SPOTIFY_REDIRECT_URI"]
+
+    # Oauth setup
+    st.session_state["oauth"] = SpotifyOAuth(
+        client_id=SPOTIFY_CLIENT_ID,
+        client_secret=SPOTIFY_CLIENT_SECRET,
+        redirect_uri=REDIRECT_URI,
+        scope='user-top-read',
+        cache_handler=None
+    )
 url_params = st.query_params
 
 # attempt to sign in with cached token
@@ -200,20 +215,6 @@ elif "code" in url_params:
 else:
     app_display_welcome()
 
-if "oauth" not in st.session_state or st.session_state["oauth"] is None:
-    # import secrets from streamlit
-    SPOTIFY_CLIENT_ID = st.secrets["spotify"]["SPOTIFY_CLIENT_ID"]
-    SPOTIFY_CLIENT_SECRET = st.secrets["spotify"]["SPOTIFY_CLIENT_SECRET"]
-    REDIRECT_URI = st.secrets["spotify"]["SPOTIFY_REDIRECT_URI"]
-
-    # Oauth setup
-    st.session_state["oauth"] = SpotifyOAuth(
-        client_id=SPOTIFY_CLIENT_ID,
-        client_secret=SPOTIFY_CLIENT_SECRET,
-        redirect_uri=REDIRECT_URI,
-        scope='user-top-read',
-        cache_handler=None
-    )
 if st.session_state["signed_in"]:
     user = sp.current_user()
     name = user["display_name"]
