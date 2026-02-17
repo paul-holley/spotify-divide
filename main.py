@@ -21,7 +21,6 @@ TRACK_CACHE_FOLDER = "track_cache/"
 RAPIDAPI_KEY = st.secrets["rapidapi"]["key"]
 GCP_CREDS = st.secrets["gcp"]
 
-
 # Bucket Names
 GCS_BUCKET_NAME = "spotify-audio-features"
 usage_bucket_name = "spotify-rapidapi-tracker"
@@ -41,6 +40,7 @@ if not usage_blob.exists():
     }
     usage_blob.upload_from_string(json.dumps(data), content_type="application/json")
 
+
 # class to handle cache
 class StreamlitCacheHandler(CacheHandler):
     def __init__(self):
@@ -52,6 +52,7 @@ class StreamlitCacheHandler(CacheHandler):
     def save_token_to_cache(self, token_info):
         st.session_state["spotipy_token"] = token_info
 
+
 def get_auth_manager():
     """
     Returns a spotipy.oauth2.SpotifyOAuth object.
@@ -62,6 +63,7 @@ def get_auth_manager():
                         scope='user-top-read',
                         cache_handler=StreamlitCacheHandler()
                         )
+
 
 def get_audio_features_by_spotify_id(track_id):
     # Load current usage
@@ -95,6 +97,7 @@ def get_audio_features_by_spotify_id(track_id):
     except requests.exceptions.RequestException as e:
         st.error(f"RapidAPI error for {track_id}: {e}")
         return None
+
 
 def normalize_features(api_data):
     minutes, seconds = api_data["duration"].split(":")
@@ -175,7 +178,6 @@ def main():
         st.markdown(f"[🎵 Click here to log in with Spotify]({auth_url})")
 
         st.stop()
-
 
 
 def callback():
