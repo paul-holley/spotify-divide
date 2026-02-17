@@ -141,10 +141,10 @@ def main():
 
                 # logic to not duplicate blobs, blob name is track id
                 if blob.exists():
-                    st.write("Already processed, skipping")
+                    st.write("Song already in database, skipping")
                     continue
 
-                st.caption("Analyzing track...")
+                st.caption("Making API Call")
 
                 # call RAPID API Track Analysis
                 analysis = get_audio_features_by_spotify_id(track_id)
