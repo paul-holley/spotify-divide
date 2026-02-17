@@ -122,14 +122,16 @@ def normalize_features(api_data):
 def main():
     st.title("Spotify Song Download")
     sp = Spotify(auth_manager=get_auth_manager())
-    user_info = sp.current_user()
-    display_name = user_info.get("display_name", user_info.get("id", "User"))
 
-    st.header(f"Welcome, {display_name}!")
     if "spotipy_token" in st.session_state:
         # get top n tracks from user
         n = 25
         top_tracks = sp.current_user_top_tracks(limit=n, time_range='short_term')['items']
+
+        user_info = sp.current_user()
+        display_name = user_info.get("display_name", user_info.get("id", "User"))
+
+        st.header(f"Welcome, {display_name}!")
 
         # display top tracks on streamlit
         if st.button("Show Top Tracks"):
