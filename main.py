@@ -163,10 +163,12 @@ def main():
 
             st.success("Top 10 tracks uploaded successfully!")
     else:
-        if st.button("Log in"):
-            # prevents a new tab from being opened
-            st.markdown(f'<meta http-equiv="refresh" content="0; '
-                        f'url={sp.auth_manager.get_authorize_url()}"/>')
+        st.title("Spotify Dashboard")
+
+        auth_url = sp.auth_manager.get_authorize_url()
+        st.markdown(f"[🎵 Click here to log in with Spotify]({auth_url})")
+
+        st.stop()
 
 
 
