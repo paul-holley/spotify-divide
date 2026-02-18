@@ -138,6 +138,7 @@ def main():
 
         # display top tracks on streamlit
         if st.button("Show Top Tracks"):
+            records = []
             # for loop goes around top n tracks
             for i in range(n):
                 track = top_tracks[i]
@@ -164,13 +165,32 @@ def main():
                         "name": track["name"],
                         "artist": track["artists"][0]["name"],
                         "uri": track["uri"],
-                        "audio_features": features,
+                        **features,
                         "source": "rapidapi",
                         "analysis_version": "v1"
                     }
-                    blob.upload_from_string(json.dumps(payload), content_type="application/json")
+                    records.append(payload)  # batch-save later
+                    source = "rapidapi"
+                    #blob.upload_from_string(json.dumps(payload), content_type="application/json")
 
             st.success("Top 10 tracks uploaded successfully!")
+            if records:
+                df_new = pd.DataFrame(records)
+
+                df_final = pd.concat([df_cache, df_new], ignore_index=True).drop_duplicates(
+                    subset=["uri"]
+                )
+
+                df_final.to_parquet(
+                    "gs://spotify-rapidapi-tracker/datasets/audio_features/all.parquet",
+                    index=False
+                )
+
+            # initialize records, so I can upload the data in a different format
+            # upload data before screen clear in a batch
+            # clear screen
+            # run ml on audio features
+            # display the results
     else:
         st.title("Spotify Dashboard")
 
